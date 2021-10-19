@@ -6,14 +6,14 @@
   "license": "MIT",
   "repository": "lubyxy/editor",
   "main": "dist/index.js",
-  "module": "dist/index.modern.js",
+  "module": "dist/index.js",
   "source": "src/index.tsx",
   "engines": {
     "node": ">=10"
   },
   "scripts": {
-    "build": "microbundle-crl --no-compress --format modern,cjs",
-    "start": "microbundle-crl watch --no-compress --format modern,cjs",
+    "build": "mn-bundle --compile --outDir dist",
+    "start": "mn-bundle --compile --watch --outDir dist",
     "prepare": "run-s build",
     "test": "run-s test:unit test:lint test:build",
     "test:build": "run-s build",
@@ -30,13 +30,14 @@
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.5.0",
     "@testing-library/user-event": "^7.2.1",
+    "@types/draft-js": "^0.11.6",
     "@types/jest": "^25.1.4",
     "@types/node": "^12.12.38",
     "@types/react": "^16.9.27",
     "@types/react-dom": "^16.9.7",
     "@typescript-eslint/eslint-plugin": "^2.26.0",
     "@typescript-eslint/parser": "^2.26.0",
-    "microbundle-crl": "^0.13.10",
+    "@whale/mn-bundle": "^0.0.7",
     "babel-eslint": "^10.0.3",
     "cross-env": "^7.0.2",
     "eslint": "^6.8.0",
@@ -50,6 +51,7 @@
     "eslint-plugin-react": "^7.17.0",
     "eslint-plugin-standard": "^4.0.1",
     "gh-pages": "^2.2.0",
+    "microbundle-crl": "^0.13.10",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.0.4",
     "react": "^16.13.1",
@@ -59,5 +61,19 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "@draft-js-plugins/editor": "^4.1.0",
+    "draft-convert": "^2.1.12",
+    "draft-js": "^0.11.7",
+    "draft-js-buttons-plugin": "^1.2.0",
+    "draft-js-dnd-plugin": "^2.0.0-beta1",
+    "draft-js-markdown-shortcuts-plugin": "^0.6.1",
+    "draft-js-modal-plugin": "^1.2.0",
+    "last-draft": "^3.3.0",
+    "last-draft-js-plugins": "^1.2.0",
+    "last-draft-js-sidebar-plugin": "^1.2.0",
+    "linkify-it": "^3.0.3",
+    "tlds": "^1.224.0"
+  }
 }

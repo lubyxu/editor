@@ -15,3 +15,7 @@ declare module '*.svg' {
   export default svgUrl;
   export { svgComponent as ReactComponent }
 }
+
+declare module 'draft-js-markdown-shortcuts-plugin';
+declare module 'last-draft-js-sidebar-plugin';
+declare module 'last-draft';
