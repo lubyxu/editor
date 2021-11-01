@@ -62,10 +62,10 @@ const toolbarPlugin = createToolbarPlugin()
 const { Toolbar } = toolbarPlugin
 
 /* Side Toolbar */
-import createSidebarPlugin from 'last-draft-js-sidebar-plugin'
-import 'last-draft-js-sidebar-plugin/lib/plugin.css'
-const sidebarPlugin = createSidebarPlugin()
-const { Sidebar } = sidebarPlugin
+// import createSidebarPlugin from 'last-draft-js-sidebar-plugin'
+// import 'last-draft-js-sidebar-plugin/lib/plugin.css'
+// const sidebarPlugin = createSidebarPlugin()
+// const { Sidebar } = sidebarPlugin
 
 /* Embed plugin */
 import createEmbedPlugin from 'draft-js-embed-plugin'
@@ -84,9 +84,11 @@ import {colorStyleMap} from 'draft-js-color-picker-plugin'
 const plugins = [
   dndPlugin, focusPlugin, alignmentPlugin, resizeablePlugin, imagePlugin,
   emojiPlugin, hashtagPlugin, linkifyPlugin, mentionPlugin,
-  toolbarPlugin, sidebarPlugin, embedPlugin, linkPlugin, createMarkdownShortcutsPlugin()
+  toolbarPlugin, embedPlugin, linkPlugin, createMarkdownShortcutsPlugin()
 ]
 
+
+const opts = 
 
 export default class extends Component {
   constructor(props) {
@@ -96,11 +98,20 @@ export default class extends Component {
   }
 
   onChange = (editorState) => {
-
     console.log('-lastChangeType', editorState.toJS());
+    const currentContentState = this.props.editorState.getCurrentContent();
+    const newContentState = editorState.getCurrentContent();
+
+    // if (currentContentState !== newContentState) {
+      // console.log('there was a change in content :>> ');
     this.props.onChange(editorState);
-    const contentState = editorState.getCurrentContent();
-    console.log(convertToRaw(contentState));
+
+    // }
+    // else {
+      //  console.log('The change was triggered by a change in focus/selection');
+    // }
+
+    // const contentState = editorState.getCurrentContent();
   }
 
   focus = () => {
@@ -143,6 +154,12 @@ export default class extends Component {
     return true
   }
 
+  handleBeforeInput = (chars, editorState, eventTimeStamp) => {
+    // console.log('chars :>> ', chars);
+    // console.log('editorState.toJS() :>> ', editorState.toJS());
+    return true;
+  }
+
   render () {
     return (
       <div>
@@ -154,11 +171,12 @@ export default class extends Component {
             customStyleMap={colorStyleMap}
             handleKeyCommand={this.handleKeyCommand}
             handleReturn={this.handleReturn}
+            handleBeforeInput={this.handleBeforeInput}
             ref={(element) => { this.editor = element }}
           />
           {/* <AlignmentTool /> */}
           <Toolbar />
-          <Sidebar />
+          {/* <Sidebar /> */}
           {/* <EmojiSuggestions />
           <MentionSuggestions
             onSearchChange={this.onSearchChange}
