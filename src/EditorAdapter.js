@@ -1,6 +1,6 @@
 import TextOperation from "./TextOperation";
 
-class EditorAdapter {
+export default class EditorAdapter {
     static operationFromEditorChange(editorState) {
         const { cursorBlockKey, cursorIndex, lastIndex, lastChangeType } = getSelection(editorState);
 
@@ -26,5 +26,23 @@ class EditorAdapter {
         operation = fragOperation.compose(operation);
         
         return [ operation ];
+    }
+
+    applyOperation(operation) {
+        const ops = operation.ops;
+
+        for (var i = 0, l = ops.length; i < l; i++) {
+            var op = ops[i];
+            // 保持光标
+            if (op.isRetain()) {
+                updateTextAttributes(op)
+            }
+            else if (op.isInsert()) {
+                insertText(op);
+            }
+            else if (op.isDelete()) {
+                removeText(op);
+            }
+        }
     }
 }
