@@ -38,8 +38,8 @@ export default class EditorAdapter {
             this.changes.push(change);
         }
         this.editorState = editorState;
-        const pair = EditorAdapter.operationFromEditorChange(this.changes, contentBlock);
-        // console.log(`pair`, pair);
+        const pair = EditorAdapter.operationFromEditorChange(this.changes, currentContent);
+        console.log(`pair`, pair);
         // this.trigger('change', pair[0], pair[1]);
     }
 
@@ -95,9 +95,6 @@ export default class EditorAdapter {
     }
 
     static operationFromEditorChange(changes, currentContent) {
-        let blockEndLength = contentBlock.getLength();
-        const blockKey = contentBlock.getKey();
-
         const blockOperation = new BlockOperation();
 
         // var operation = new TextOperation().retain(
@@ -108,11 +105,13 @@ export default class EditorAdapter {
 
         for (var i = changes.length - 1; i >= 0; i--) {
             var change = changes[i];
-            // var blockKey = changes.blockKey;
+            var blockKey = change.blockKey;
 
             var { operation, blockEndLength } = blockOperation.createTextOperation(blockKey, currentContent);
             var fromIndex = change.start;
             var restLength = blockEndLength - fromIndex - change.text.length;
+
+            console.log(`operation`, operation)
 
             // 保持住fromIndex，做delete操作，插入操作，保持住剩余的length，合并之前的operation
             operation = new TextOperation()
@@ -132,9 +131,9 @@ export default class EditorAdapter {
             // );
 
             blockEndLength += change.removed.length - change.text.length;
-            blockOperation.setTextOpertaion(blockKey, operation);
+            blockOperation.setTextOpertaion(blockKey, operation, blockEndLength);
         }
-        return [operation, inverse];
+        return [operation];
     }
 
     applyOperation(operation) {

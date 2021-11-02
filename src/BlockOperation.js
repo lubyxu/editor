@@ -6,6 +6,7 @@ export default class BlockOperation {
     }
 
     createTextOperation(blockKey, currentContent) {
+        console.log('createTextOperation');
         if (this.blockMap[blockKey]) {
             return this.blockMap[blockKey];
         }
@@ -14,14 +15,15 @@ export default class BlockOperation {
         const blockEndLength = contentBlock.getLength();
 
         this.blockMap[blockKey] = {
-            opertaion: new TextOperation().retain(blockLength),
+            operation: new TextOperation().retain(blockEndLength),
             blockEndLength,
         };
         return this.blockMap[blockKey];
     }
 
-    setTextOpertaion(blockKey, opertaion) {
+    setTextOpertaion(blockKey, opertaion, blockEndLength) {
         this.blockMap[blockKey].opertaion = opertaion;
+        this.blockMap[blockKey].blockEndLength = blockEndLength;
     }
 
 
