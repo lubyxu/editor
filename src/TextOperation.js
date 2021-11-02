@@ -2,10 +2,12 @@
 import Utils from './Utils.js';
 import TextAction from './TextAction.js';
 
+
+/**
+ * textOperation 找到不同的段落，段落内的操作做合并处理
+ */
 class TextOperation {
-    constructor(blockKey) {
-        // 修改的段落key值。
-        this.blockKey = blockKey;
+    constructor() {
         // When an operation is applied to an input string, you can think of this as
         // if an imaginary cursor runs over the entire string and skips over some
         // parts, deletes some parts and inserts characters at some positions. These
@@ -17,6 +19,8 @@ class TextOperation {
         // The targetLength is the length of every string that results from applying
         // the operation on a valid input string.
         this.targetLength = 0;
+
+        this.blockMap = {}
     }
 
     equals(other) {
@@ -40,6 +44,7 @@ class TextOperation {
     // methods. They all return the operation for convenient chaining.
 
     // Skip over a given number of characters.
+    // 保持住 blockKey下的光标
     retain(n, attributes) {
         if (typeof n !== 'number' || n < 0) {
             throw new Error('retain expects a positive integer.');
@@ -57,7 +62,7 @@ class TextOperation {
             prevOp.chars += n;
         } else {
             // Create a new TextAction.
-            this.ops.push(new TextAction('retain', n, attributes));
+            this.ops.push(new TextAction('retain', n, attributes, this.blockKey));
         }
         return this;
     }

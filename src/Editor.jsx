@@ -80,6 +80,8 @@ const linkPlugin = createLinkPlugin()
 /* Color */
 import {colorStyleMap} from 'draft-js-color-picker-plugin'
 
+import EditorAdapter from './EditorAdapter';
+
 /* init the plugins */
 const plugins = [
   dndPlugin, focusPlugin, alignmentPlugin, resizeablePlugin, imagePlugin,
@@ -87,8 +89,7 @@ const plugins = [
   toolbarPlugin, embedPlugin, linkPlugin, createMarkdownShortcutsPlugin()
 ]
 
-
-const opts = 
+const adapter = new EditorAdapter();
 
 export default class extends Component {
   constructor(props) {
@@ -98,9 +99,18 @@ export default class extends Component {
   }
 
   onChange = (editorState) => {
-    console.log('-lastChangeType', editorState.toJS());
-    const currentContentState = this.props.editorState.getCurrentContent();
-    const newContentState = editorState.getCurrentContent();
+    // console.log('-lastChangeType', editorState.toJS());
+
+    const selectionState = editorState.getSelection();
+    var anchorKey = selectionState.getAnchorKey();
+    var currentContent = editorState.getCurrentContent();
+    var currentContentBlock = currentContent.getBlockForKey(anchorKey);
+    var start = selectionState.getStartOffset();
+    var end = selectionState.getEndOffset();
+    var selectedText = currentContentBlock.getText().slice(start, end);
+
+    const selectionBefore = currentContent.getSelectionAfter().toJS();
+    // console.log('selectionBefore :>> ', selectionBefore);
 
     // if (currentContentState !== newContentState) {
       // console.log('there was a change in content :>> ');
@@ -110,6 +120,18 @@ export default class extends Component {
     // else {
       //  console.log('The change was triggered by a change in focus/selection');
     // }
+
+    if (this.props.editorState.getCurrentContent() === currentContent) {
+      // console.log('editorState.toJS() :>> ', editorState.toJS());
+      // console.log('The change was triggered by a change in focus/selection');
+    }
+    else {
+      // console.log('zhuijiazhuijiazhuij', selectionBefore)
+     
+      // 追加工作，触发editorAdapter
+    }
+
+    adapter.onChange(editorState);
 
     // const contentState = editorState.getCurrentContent();
   }

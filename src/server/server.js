@@ -69,3 +69,6 @@ class EditorServer extends Server {
         }
     }
 }
+
+
+export default EditorServer;

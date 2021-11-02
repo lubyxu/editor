@@ -13,6 +13,7 @@ export default class TextAction {
     this.chars = null // characters count
     this.text = null
     this.attributes = null
+    this.blockKey = arguments[3];
 
     if (type === 'insert') {
       this.text = arguments[1]
