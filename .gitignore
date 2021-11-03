@@ -3,6 +3,11 @@
 
 # dependencies
 node_modules
+build-server
+.vscode
+example
+
+yarn.lock
 
 # builds
 build

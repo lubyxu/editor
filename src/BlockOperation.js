@@ -3,10 +3,18 @@ import TextOperation from "./TextOperation";
 export default class BlockOperation {
     constructor() {
         this.blockMap = {};
+
+        // new Proxy(this, {
+        //     get: function (target, propKey) {
+        //         console.log(`propKey`, propKey);
+        //         const map = Reflect.get(target, 'blockMap');
+        //         console.log(`map`, map)
+        //         return map[propKey];
+        //     }
+        // });
     }
 
     createTextOperation(blockKey, currentContent) {
-        console.log('createTextOperation');
         if (this.blockMap[blockKey]) {
             return this.blockMap[blockKey];
         }
@@ -21,11 +29,11 @@ export default class BlockOperation {
         return this.blockMap[blockKey];
     }
 
-    setTextOpertaion(blockKey, opertaion, blockEndLength) {
-        this.blockMap[blockKey].opertaion = opertaion;
+    setTextOpertaion(blockKey, operation, blockEndLength) {
+        if (!this.blockMap[blockKey]) {
+            this.blockMap[blockKey] = {};
+        }
+        this.blockMap[blockKey].operation = operation;
         this.blockMap[blockKey].blockEndLength = blockEndLength;
     }
-
-
-    compose() {}
 }

@@ -6,6 +6,7 @@ export default class SharedEditor {
         this.rtcmAdapter = new EditorAdapter();
 
         socket.on('doc', data => {
+            console.log(`doc comming`)
             this.socketIOAdapter = new SocketIOAdapter(socket);
 
             this.client = new EditorClient(data, this.socketIOAdapter, this.rtcmAdapter);

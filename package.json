@@ -40,6 +40,7 @@
     "@whale/mn-bundle": "^0.0.7",
     "babel-eslint": "^10.0.3",
     "cross-env": "^7.0.2",
+    "esbuild": "^0.13.12",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.7.0",
     "eslint-config-standard": "^14.1.0",
@@ -64,6 +65,7 @@
   ],
   "dependencies": {
     "@draft-js-plugins/editor": "^4.1.0",
+    "cors": "^2.8.5",
     "draft-convert": "^2.1.12",
     "draft-js": "^0.11.7",
     "draft-js-buttons-plugin": "^1.2.0",
@@ -74,6 +76,8 @@
     "last-draft-js-plugins": "^1.2.0",
     "last-draft-js-sidebar-plugin": "^1.2.0",
     "linkify-it": "^3.0.3",
+    "socket.io": "2.4.0",
+    "socket.io-client": "2.4.0",
     "tlds": "^1.224.0"
   }
 }

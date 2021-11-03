@@ -7,11 +7,21 @@ class Server {
         this.operations = operations || [];
     }
     // 从client端获取operation
+    // revision 客户端的某个版本
+    /**
+     * 找到 服务端 从 client端revision版本开始之后的为处理operations。
+     * 与发来的operation做transfrom。将当前operation转化成 operations‘
+     * 应用到document中。
+     * 将transform过的operation存入队列。
+     * @param {*} revision 
+     * @param {*} operation 
+     * @returns 
+     */
     receiveOperation(revision, operation) {
         if (this.operations.length < revision) {
             throw new Error('operation revision not in history');
         }
-        // 从第 revision 开始，找到所有未处理的操作
+        // 从客户端第 revision 版本开始，找到所有未处理的操作
         var concurrentOperations = this.operations.slice(revision);
 
         // 转operation
@@ -67,6 +77,33 @@ class EditorServer extends Server {
         catch (exc) {
             console.error(exc)
         }
+    }
+
+    addClient(socket) {
+        socket
+            .join(this.docId)
+            .emit('doc', {
+                document: this.document,
+                revision: this.operations.length,
+                clients: this.clients,
+                // replay the operations on the clients, so the rich text will show correctly
+                operations: this.operations
+            })
+            .on('operation', (revision, operation, selection) => {
+                // this.mayWrite(socket, (mayWrite) => {
+                //   if (!mayWrite) {
+                //     console.log("User doesn't have the right to edit.")
+                //     return
+                //   }
+                this.onOperation(socket, revision, operation, selection)
+                // })
+            });
+        
+        this.clients[socket.id] = {
+            id: socket.id,
+            name: socket.id,  
+        };
+        socket.broadcast['in'](this.docId).emit('client_join', this.clients[socket.id])
     }
 }
 
