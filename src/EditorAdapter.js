@@ -2,7 +2,7 @@ import TextOperation from './TextOperation';
 import BlockOperation from './BlockOperation';
 import { Modifier, SelectionState, EditorState } from 'draft-js';
 export default class EditorAdapter {
-    constructor(api) {
+    constructor(ref) {
         this.selectionBefore = null;
         this.selectionAfter = null;
 
@@ -12,14 +12,22 @@ export default class EditorAdapter {
 
         this.changes = [];
         this.patch = null;
+        this.ref = ref;
 
-        this.api = api;
+        this.mount = false;
     }
+
     registerCallbacks(cb) {
         this.callbacks = cb;
     }
 
     onChange(editorState) {
+        // 忽略第一次onChange
+        if (!this.mount) {
+            this.mount = true;
+            return;
+        }
+
         const currentContent = editorState.getCurrentContent();
         const blockKey = editorState.getSelection().getAnchorKey();
         const contentBlock = currentContent.getBlockForKey(blockKey);
@@ -38,10 +46,13 @@ export default class EditorAdapter {
             this.changes.push(change);
         }
         this.editorState = editorState;
+        if (!this.changes.length) {
+            return;
+        }
         const pair = EditorAdapter.operationFromEditorChange(this.changes, currentContent);
         this.changes = [];
-        // console.log(`pair`, pair);
-        // this.trigger('change', pair[0], pair[1]);
+        console.log(`pair`, pair)
+        this.trigger('change', pair[0], pair[1]);
     }
 
     getInsertDiff(editorState) {
@@ -167,6 +178,7 @@ export default class EditorAdapter {
     }
 
     applyOperation(blockKey, operation) {
+        console.log(`operation`, operation)
         const ops = operation.ops;
 
         var index = 0;
@@ -202,8 +214,8 @@ export default class EditorAdapter {
             currentContent: newContent,
         });
 
-        this.api.setEditorState(newEditorState);
 
+        this.ref.trigger('change', newEditorState);
         // console.log(`newContent`, newEditorState.toJS());
     }
 

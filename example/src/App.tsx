@@ -3,7 +3,11 @@ import React from 'react'
 import Editor from 'editor'
 
 const App = () => {
-    return <Editor />
+    return (
+        <div>
+            <Editor />
+        </div>
+    )
 }
 
 export default App

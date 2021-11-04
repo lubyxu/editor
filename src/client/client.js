@@ -34,6 +34,7 @@ export default class Client {
         this.state = state;
     }
     applyClient(operation) {
+        console.log(`operation`, operation)
         this.setState(this.state.applyClient(this, operation));
     }
     applyServer(operation) {
@@ -51,6 +52,7 @@ export default class Client {
 // 同步状态中个，client端没有 pending的 operation。
 export class Synchronized {
     // 发送一个operation，并返回一个正在等待确认的operation
+    // 这个是 blockOperation
     applyClient(client, operation) {
         // When the user makes an edit, send the operation to the server and
         // switch to the 'AwaitingConfirm' state

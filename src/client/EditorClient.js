@@ -3,7 +3,7 @@ import Utils from '../Utils';
 import Client from './client';
 
 export default class EditorClient extends Client {
-    constructor (data, serverAdapter, editorAdapter) {
+    constructor (data, serverAdapter, editorAdapter, apis) {
         super(data.revision, data.operations);
         
         Utils.makeEventEmitter(EditorClient, ['clientsChanged'], this);
@@ -16,6 +16,8 @@ export default class EditorClient extends Client {
         this.serverAdapter.registerCallbacks({
             ack: () => {
                 this.serverAck();
+                // DEV 下用于调试。需要删调
+                apis.forceUpdate();
             },
             operation: (operation) => {
                 this.applyServer(TextOperation.fromJSON(operation))
@@ -39,6 +41,7 @@ export default class EditorClient extends Client {
     }
 
     onChange(textOperation, inverse) {
+        console.log(`textOperation`, textOperation)
         this.applyClient(textOperation);
     }
 }

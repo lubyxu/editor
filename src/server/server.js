@@ -29,7 +29,7 @@ class Server {
             operation = WrappedOperation.transform(operation, concurrentOperations[i])[0];
         }
 
-        this.document = operation.apply(this.document);
+        // this.document = operation.apply(this.document);
         this.operations.push(operation);
 
         return operation;
@@ -65,7 +65,7 @@ class EditorServer extends Server {
             var clientId = socket.id;
             var wrappedPrim = this.receiveOperation(revision, wrapped);
             console.log('new operation:' + wrapped);
-            this.getClient(clientId).selection = wrappedPrime.meta;
+            // this.getClient(clientId).selection = wrappedPrime.meta;
             socket.emit('ack');
             socket.broadcast['in'](this.docId).emit(
                 'operation',

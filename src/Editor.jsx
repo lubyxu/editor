@@ -8,7 +8,7 @@ import {
     convertToRaw
 } from 'draft-js';
 import { fromJS, get } from 'immutable';
-import io from '../node_modules/socket.io-client/dist/socket.io.js'
+import io from 'socket.io-client'
 
 /* Emoji plugin */
 import createEmojiPlugin from 'draft-js-emoji-plugin';
@@ -90,6 +90,9 @@ import { colorStyleMap } from 'draft-js-color-picker-plugin';
 
 import EditorAdapter from './EditorAdapter';
 import SharedEditor from './client';
+import Utils from './Utils.js';
+
+import EditorServer from './server/server';
 
 /* init the plugins */
 const plugins = [
@@ -109,20 +112,26 @@ const plugins = [
 ];
 
 
-export default class extends Component {
+
+class Event {}
+export default class WhaleEditor extends Component {
     constructor(props) {
         super(props);
         this.state = { suggestions: props.mentions || fromJS([]) };
         this.keyBindings = this.props.keyBindings || [];
 
-        this.adapter = new EditorAdapter({
-            setEditorState: this.setEditorState,
-        });
-
         this.socket = io('http://localhost:4001');
-        
 
-        this.editor = new SharedEditor(this.socket);
+        console.log('this.socket :>> ', this.socket);
+        this.ref = new Event();
+
+        Utils.makeEventEmitter(Event, ['change'], this.ref);
+        this.ref.on('change', this.props.onChange);
+
+        this.adapter = new EditorAdapter(this.ref);
+        this.shareEditor = new SharedEditor(this.socket, this.adapter, {
+            forceUpdate: this.forceUpdate.bind(this)
+        });
     }
 
     setEditorState = (editorState) => {
@@ -132,16 +141,17 @@ export default class extends Component {
     onChange = (editorState) => {
         this.props.onChange(editorState);
         this.adapter.onChange(editorState);
-
     };
 
     onMock = () => {
-        const currentContent = this.props.editorState.getCurrentContent();
-        const contentBlock = currentContent.getFirstBlock();
-        const blockLength = contentBlock.getLength();
+        setTimeout(() => {
+            const currentContent = this.props.editorState.getCurrentContent();
+            const contentBlock = currentContent.getFirstBlock();
+            const blockLength = contentBlock.getLength();
 
-        const blockOperation = this.adapter.mockOpertaion(blockLength, contentBlock.getKey());
-        this.adapter.applyBlockOperation(blockOperation);
+            const blockOperation = this.adapter.mockOpertaion(blockLength, contentBlock.getKey());
+            this.adapter.applyBlockOperation(blockOperation);
+        }, 3000);
     }
 
     onMockTransform = () => {
@@ -203,36 +213,59 @@ export default class extends Component {
         return true;
     };
 
+    clientData = () => {
+        const client = this.shareEditor.client;
+
+        let arr = [];
+        
+        if (client) {
+            arr.push('状态：'+ client.state.constructor.name);
+            arr.push('版本：' + client.revision);
+        }
+        else {
+            arr.push('client 还未初始化');
+        }
+
+        return arr;
+    }
+
     render() {
         return (
             <div>
                 <button onClick={this.onMock}>模拟 retain(1) insert(22)</button>
                 <button onClick={this.onMockTransform}>模拟 transform</button>
-                <div
-                    className='editor'
-                    style={{ border: '1px solid #000', marginTop: 10 }}
-                >
-                    <Editor
-                        editorState={this.props.editorState}
-                        onChange={this.onChange}
-                        plugins={plugins}
-                        customStyleMap={colorStyleMap}
-                        handleKeyCommand={this.handleKeyCommand}
-                        handleReturn={this.handleReturn}
-                        handleBeforeInput={this.handleBeforeInput}
-                        ref={(element) => {
-                            this.editor = element;
-                        }}
-                    />
-                    {/* <AlignmentTool /> */}
-                    <Toolbar />
-                    {/* <Sidebar /> */}
-                    {/* <EmojiSuggestions />
-          <MentionSuggestions
-            onSearchChange={this.onSearchChange}
-            suggestions={this.state.suggestions}
-            onClose={() => this.setState({suggestions: fromJS([])})}
-          /> */}
+                <div style={{display: 'flex'}}>
+                    <div
+                        className='editor'
+                        style={{ border: '1px solid #000', marginTop: 10, width: 800 }}
+                    >
+                        <Editor
+                            editorState={this.props.editorState}
+                            onChange={this.onChange}
+                            plugins={plugins}
+                            customStyleMap={colorStyleMap}
+                            handleKeyCommand={this.handleKeyCommand}
+                            handleReturn={this.handleReturn}
+                            handleBeforeInput={this.handleBeforeInput}
+                            ref={(element) => {
+                                this.editor = element;
+                            }}
+                        />
+                        {/* <AlignmentTool /> */}
+                        <Toolbar />
+                        {/* <Sidebar /> */}
+                        {/* <EmojiSuggestions />
+            <MentionSuggestions
+                onSearchChange={this.onSearchChange}
+                suggestions={this.state.suggestions}
+                onClose={() => this.setState({suggestions: fromJS([])})}
+            /> */}
+                    </div>
+
+                    <div>
+                        <h1>client信息</h1>
+                        {this.clientData()}
+                    </div>
                 </div>
             </div>
         );

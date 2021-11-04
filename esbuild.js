@@ -3,4 +3,5 @@ require('esbuild').build({
     bundle: true,
     outdir: 'build-server',
     format: 'cjs',
+    watch: true,
 })
