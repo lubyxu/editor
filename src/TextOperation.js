@@ -45,7 +45,7 @@ class TextOperation {
 
     // Skip over a given number of characters.
     // 保持住 blockKey下的光标
-    retain(n, attributes) {
+    retain(blockIndex, n, attributes) {
         if (typeof n !== 'number' || n < 0) {
             throw new Error('retain expects a positive integer.');
         }
@@ -108,6 +108,11 @@ class TextOperation {
         } else {
             this.ops.push(new TextAction('insert', str, attributes));
         }
+        return this;
+    }
+
+    split(n) {
+        this.ops.push(new TextAction('split', n));
         return this;
     }
 
@@ -313,6 +318,7 @@ class TextOperation {
     // preserves the changes of both. Or, in other words, for each input string S
     // and a pair of consecutive operations A and B,
     // apply(apply(S, A), B) = apply(S, compose(A, B)) must hold.
+    // 两个TextOperation 合并成一个 TextOperation
     compose(operation2) {
         var operation1 = this;
         if (operation1.targetLength !== operation2.baseLength) {

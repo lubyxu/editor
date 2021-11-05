@@ -19,4 +19,4 @@ var server = new EditorSocketIOServer('', [], 1)
 io.on('connection', function (socket) {
     console.log('connect')
   server.addClient(socket)
-})
+});

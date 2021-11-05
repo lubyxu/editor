@@ -86,7 +86,18 @@ export default class BlockOperation {
                 [key]: operation.toJSON(),
             };
         }, {});
-        console.log(`json`, json);
+        return json;
+    }
+
+    static fromJSON(blockOperation) {
+        const keys = Object.keys(blockOperation);
+        const json = keys.reduce((prev, key) => {
+            const operation = blockOperation[key];
+            return {
+                ...prev,
+                [key]: TextOperation.fromJSON(operation),
+            };
+        }, {});
         return json;
     }
 }

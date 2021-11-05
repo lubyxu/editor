@@ -1,10 +1,11 @@
-import TextOperation from '../TextOperation';
+// import TextOperation from '../TextOperation';
+import BlockOperation from '../BlockOperation';
 import WrappedOperation from '../WrappedOperation';
 
 class Server {
     constructor(document, operations) {
         this.document = document;
-        this.operations = operations || [];
+        this.blockOperations = operations || [];
     }
     // 从client端获取operation
     // revision 客户端的某个版本
@@ -17,22 +18,23 @@ class Server {
      * @param {*} operation 
      * @returns 
      */
-    receiveOperation(revision, operation) {
-        if (this.operations.length < revision) {
+    receiveOperation(revision, blockOperation) {
+        if (this.blockOperations.length < revision) {
             throw new Error('operation revision not in history');
         }
         // 从客户端第 revision 版本开始，找到所有未处理的操作
-        var concurrentOperations = this.operations.slice(revision);
+        var concurrentOperations = this.blockOperations.slice(revision);
 
         // 转operation
         for (var i = 0; i < concurrentOperations.length; i++) {
-            operation = WrappedOperation.transform(operation, concurrentOperations[i])[0];
+            blockOperation = WrappedOperation.transform(blockOperation, concurrentOperations[i])[0];
         }
 
         // this.document = operation.apply(this.document);
-        this.operations.push(operation);
+        console.log(`blockOperation`, blockOperation)
+        this.blockOperations.push(blockOperation);
 
-        return operation;
+        return blockOperation;
     }
 }
 
@@ -51,7 +53,7 @@ class EditorServer extends Server {
         var wrapped;
         try {
             wrapped = new WrappedOperation(
-                TextOperation.fromJSON(operation),
+                BlockOperation.fromJSON(operation),
                 // selection 表示 meta
                 selection && Selection.fromJSON(selection)
             );
@@ -70,7 +72,8 @@ class EditorServer extends Server {
             socket.broadcast['in'](this.docId).emit(
                 'operation',
                 clientId,
-                wrappedPrim.wrapped.toJSON(),
+                wrappedPrim.toJSON(),
+                // 这个meta，用法不是这么用。需要改造
                 wrappedPrim.meta,
             );
         }
@@ -84,10 +87,10 @@ class EditorServer extends Server {
             .join(this.docId)
             .emit('doc', {
                 document: this.document,
-                revision: this.operations.length,
+                revision: this.blockOperations.length,
                 clients: this.clients,
                 // replay the operations on the clients, so the rich text will show correctly
-                operations: this.operations
+                operations: this.blockOperations
             })
             .on('operation', (revision, operation, selection) => {
                 // this.mayWrite(socket, (mayWrite) => {

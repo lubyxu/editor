@@ -2,13 +2,13 @@ import TextOperation from './TextOperation';
 import BlockOperation from './BlockOperation';
 import { Modifier, SelectionState, EditorState } from 'draft-js';
 export default class EditorAdapter {
-    constructor(ref) {
+    constructor(ref, editorState) {
         this.selectionBefore = null;
         this.selectionAfter = null;
 
         this.selectionBlock = null;
 
-        this.editorState = null;
+        this.editorState = editorState;
 
         this.changes = [];
         this.patch = null;
@@ -49,10 +49,11 @@ export default class EditorAdapter {
         if (!this.changes.length) {
             return;
         }
+        console.log(`editorState.toJS()`, editorState.toJS())
         const pair = EditorAdapter.operationFromEditorChange(this.changes, currentContent);
         this.changes = [];
         console.log(`pair`, pair)
-        this.trigger('change', pair[0], pair[1]);
+        // this.trigger('change', pair[0], pair[1]);
     }
 
     getInsertDiff(editorState) {
@@ -81,24 +82,54 @@ export default class EditorAdapter {
         }
     }
 
-    getInsertChar(editorState) {
-        const currentContent = editorState.getCurrentContent();
+    getBlockIndexByBlockKey(blockKey) {
+        const blocks = this.editorState.getCurrentContent().getBlocksAsArray();
+        return blocks.findIndex(item => item === blockKey);
+    }
+
+    getSelection(editorState) {
         const selection = editorState.getSelection();
+        return selection;
+    }
+
+    // 插入文本
+    getInsertChar(editorState) {
+        const selection = this.getSelection(editorState);
         const blockKey = selection.getAnchorKey();
+        const blockIndex = this.getBlockIndexByBlockKey(blockKey);
         const contentBlock = currentContent.getBlockForKey(blockKey);
         const startOffset = selection.getStartOffset();
         const text = contentBlock.getText()[startOffset - 1];
-
         const change = {
-            blockKey,
+            blockIndex,
             start: startOffset - 1,
             end: startOffset,
             text,
             removed: '',
             attributes: {},
-        }
+        };
         return change;
     }
+
+    // 插入 n 行
+    getInsertBlock(editorState) {
+        const selection = this.getSelection(editorState);
+        const blockIndex = this.getBlockIndexByBlockKey(blockKey);
+        const startOffset = selection.getStartOffset();
+
+        return {
+            blockIndex,
+            start: startOffset - 1,
+            end: startOffset,
+            split: true,
+            attributes: {},
+        };
+    }
+
+    // 删除文本
+
+    // 删除 n 行
+    
 
     getLastChange() {
         if (this.changes.length) {
@@ -177,21 +208,24 @@ export default class EditorAdapter {
         });
     }
 
-    applyOperation(blockKey, operation) {
-        console.log(`operation`, operation)
-        const ops = operation.ops;
+    applyOperation(blockOperation) {
 
-        var index = 0;
-        for (var i = 0, l = ops.length; i < l; i++) {
-            var op = ops[i];
-            // 保持光标
-            if (op.isRetain()) {
-                // updateTextAttributes(op);
-                index += op.chars;
-            } else if (op.isInsert()) {
-                this.insertText(blockKey, index, op);
-            } else if (op.isDelete()) {
-                // removeText(op);
+        for (let key in blockOperation) {
+            const operation = blockOperation[key];
+            const ops = operation.ops;
+
+            var index = 0;
+            for (var i = 0, l = ops.length; i < l; i++) {
+                var op = ops[i];
+                // 保持光标
+                if (op.isRetain()) {
+                    // updateTextAttributes(op);
+                    index += op.chars;
+                } else if (op.isInsert()) {
+                    this.insertText(key, index, op);
+                } else if (op.isDelete()) {
+                    // removeText(op);
+                }
             }
         }
     }

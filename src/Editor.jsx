@@ -128,7 +128,7 @@ export default class WhaleEditor extends Component {
         Utils.makeEventEmitter(Event, ['change'], this.ref);
         this.ref.on('change', this.props.onChange);
 
-        this.adapter = new EditorAdapter(this.ref);
+        this.adapter = new EditorAdapter(this.ref, this.props.editorState);
         this.shareEditor = new SharedEditor(this.socket, this.adapter, {
             forceUpdate: this.forceUpdate.bind(this)
         });

@@ -137,3 +137,30 @@ interface Plugin {
   component: Mention,
 }
 ```
+
+
+## Opts
+
+### 光标保持操作
+`retain(blockIndex, cursorIndex)`
+
+### 插入操作
+`insert(text)`
+
+### 换n行
+`split(n)`
+
+### 删n行
+`blockDel(n)`
+
+### 删除操作
+`delete(n)`
+
+## 例子
+
+STR: 'abc'.
+
+clientA: retain(0, 1) insert('clientA')
+clientB: retain(0, 1) insert('B')
+
+假设 clientA 先到， B 需要transfrom => retain(0, 1 + 7) insert('B');

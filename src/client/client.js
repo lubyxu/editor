@@ -34,7 +34,6 @@ export default class Client {
         this.state = state;
     }
     applyClient(operation) {
-        console.log(`operation`, operation)
         this.setState(this.state.applyClient(this, operation));
     }
     applyServer(operation) {
