@@ -19,8 +19,6 @@ class TextOperation {
         // The targetLength is the length of every string that results from applying
         // the operation on a valid input string.
         this.targetLength = 0;
-
-        this.blockMap = {}
     }
 
     equals(other) {
@@ -44,8 +42,7 @@ class TextOperation {
     // methods. They all return the operation for convenient chaining.
 
     // Skip over a given number of characters.
-    // 保持住 blockKey下的光标
-    retain(blockIndex, n, attributes) {
+    retain(n, attributes) {
         if (typeof n !== 'number' || n < 0) {
             throw new Error('retain expects a positive integer.');
         }
@@ -215,7 +212,7 @@ class TextOperation {
 
     // Apply an operation to a string, returning a new string.
     // Throws an error if there's a mismatch between the input string and the operation.
-    apply(str, oldAttributes, newAttributes) {
+    apply1(str, oldAttributes, newAttributes) {
         var operation = this;
         oldAttributes = oldAttributes || [];
         newAttributes = newAttributes || [];
@@ -279,6 +276,84 @@ class TextOperation {
                 oldIndex += op.chars;
             }
         }
+        if (oldIndex !== str.length) {
+            throw new Error(
+                "The operation didn't operate on the whole string."
+            );
+        }
+        var newString = newStringParts.join('');
+        Utils.assert(newString.length === newAttributes.length);
+
+        return newString;
+    }
+
+    // 应用在server上的代码
+    apply(str, oldAttributes, newAttributes) {
+        var operation = this;
+        oldAttributes = oldAttributes || [];
+        newAttributes = newAttributes || [];
+        if (str.length !== operation.baseLength) {
+            throw new Error(
+                "The operation's base length must be equal to the string's length."
+            );
+        }
+        var newStringParts = [];
+        var j = 0;
+        var k;
+        var attr;
+        var oldIndex = 0;
+        var ops = this.ops;
+
+        for (var i = 0, l = ops.length; i < l; i++) {
+            var op = ops[i];
+            if (op.isRetain()) {
+                if (oldIndex + op.chars > str.length) {
+                    throw new Error(
+                        "Operation can't retain more characters than are left in the string."
+                    );
+                }
+                // Copy skipped part of the retained string.
+                newStringParts[j++] = str.slice(oldIndex, oldIndex + op.chars);
+
+                // Copy (and potentially update) attributes for each char in retained string.
+                for (k = 0; k < op.chars; k++) {
+                    var currAttributes = oldAttributes[oldIndex + k] || {};
+                    var updatedAttributes = {};
+                    for (attr in currAttributes) {
+                        updatedAttributes[attr] = currAttributes[attr];
+                        Utils.assert(updatedAttributes[attr] !== false);
+                    }
+                    for (attr in op.attributes) {
+                        if (op.attributes[attr] === false) {
+                            delete updatedAttributes[attr];
+                        } else {
+                            updatedAttributes[attr] = op.attributes[attr];
+                        }
+                        Utils.assert(updatedAttributes[attr] !== false);
+                    }
+                    newAttributes.push(updatedAttributes);
+                }
+
+                oldIndex += op.chars;
+            } else if (op.isInsert()) {
+                // Insert string.
+                newStringParts[j++] = op.text;
+
+                // Insert attributes for each char.
+                for (k = 0; k < op.text.length; k++) {
+                    var insertedAttributes = {};
+                    for (attr in op.attributes) {
+                        insertedAttributes[attr] = op.attributes[attr];
+                        Utils.assert(insertedAttributes[attr] !== false);
+                    }
+                    newAttributes.push(insertedAttributes);
+                }
+            } else {
+                // delete op
+                oldIndex += op.chars;
+            }
+        }
+        // 走遍之前的 str
         if (oldIndex !== str.length) {
             throw new Error(
                 "The operation didn't operate on the whole string."

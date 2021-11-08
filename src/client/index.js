@@ -6,8 +6,8 @@ export default class SharedEditor {
 
         socket.on('doc', data => {
             this.socketIOAdapter = new SocketIOAdapter(socket);
-
-            this.client = new EditorClient({revision: 0, operations: []}, this.socketIOAdapter, this.rtcmAdapter, apis);
+            console.log(`data`, data)
+            this.client = new EditorClient(data, this.socketIOAdapter, this.rtcmAdapter, apis);
         })
     }
 }

@@ -16,7 +16,7 @@ export default class Client {
             var initalTextOp = new TextOperation();
 
             _ops.forEach(op => {
-                var _txtOp = TextOperation.fromJSON(OP);
+                var _txtOp = TextOperation.fromJSON(op);
                 initalTextOp = initalTextOp.compose(_txtOp);
             })
 

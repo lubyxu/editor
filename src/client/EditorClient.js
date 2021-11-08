@@ -1,5 +1,4 @@
 import TextOperation from '../TextOperation';
-import BlockOperation from '../BlockOperation';
 import Utils from '../Utils';
 import Client from './client';
 
@@ -21,7 +20,7 @@ export default class EditorClient extends Client {
                 apis.forceUpdate();
             },
             operation: (operation) => {
-                this.applyServer(BlockOperation.fromJSON(operation))
+                this.applyServer(TextOperation.fromJSON(operation))
             }
         });
 
@@ -42,7 +41,6 @@ export default class EditorClient extends Client {
     }
 
     onChange(textOperation, inverse) {
-        console.log(`textOperation`, textOperation)
         this.applyClient(textOperation);
     }
 }

@@ -1,6 +1,7 @@
 import TextOperation from './TextOperation';
 import BlockOperation from './BlockOperation';
-import { Modifier, SelectionState, EditorState } from 'draft-js';
+import Selection from './Selection';
+import { Modifier, SelectionState, EditorState, convertToRaw, ContentState, RichUtils } from 'draft-js';
 export default class EditorAdapter {
     constructor(ref, editorState) {
         this.selectionBefore = null;
@@ -21,6 +22,14 @@ export default class EditorAdapter {
         this.callbacks = cb;
     }
 
+    blockLen(currentContent) {
+        const blocks = currentContent.getBlocksAsArray();
+
+        return blocks.reduce((len, cur) => {
+            return len + cur.text.length;
+        }, 0);
+    }
+
     onChange(editorState) {
         // 忽略第一次onChange
         if (!this.mount) {
@@ -32,6 +41,7 @@ export default class EditorAdapter {
         const blockKey = editorState.getSelection().getAnchorKey();
         const contentBlock = currentContent.getBlockForKey(blockKey);
         const lastChangeType = editorState.getLastChangeType();
+        const totalLen = this.blockLen(currentContent);
 
         if (
             this.editorState &&
@@ -40,51 +50,37 @@ export default class EditorAdapter {
         ) {
             // focuse / selection 会触发
             this.selectionBefore = currentContent.getSelectionBefore();
+            // const startOffset = this.getSelectionStartOffset(editorState);
+
         } else if (this.editorState && lastChangeType === 'insert-characters') {
             // this.getInsertDiff(editorState);
             const change = this.getInsertChar(editorState);
+            this.changes.push(change);
+        }
+        else if (this.editorState && lastChangeType === 'backspace-character') {
+            const change = this.getDelChar(editorState);
+            this.changes.push(change);
+        }
+        else if (lastChangeType === 'remove-range') {
+            const change = this.getRemoveRanegChange(editorState);
+            console.log(`change`, change)
             this.changes.push(change);
         }
         this.editorState = editorState;
         if (!this.changes.length) {
             return;
         }
-        console.log(`editorState.toJS()`, editorState.toJS())
-        const pair = EditorAdapter.operationFromEditorChange(this.changes, currentContent);
+        const pair = EditorAdapter.operationFromCodeMirrorChanges(
+            this.changes,
+            totalLen
+        );
         this.changes = [];
-        console.log(`pair`, pair)
-        // this.trigger('change', pair[0], pair[1]);
-    }
-
-    getInsertDiff(editorState) {
-        const currentContent = editorState.getCurrentContent();
-        const selectionBefore = currentContent.getSelectionBefore();
-        const selectionAfter = currentContent.getSelectionAfter();
-        const blockKey = selectionBefore.getAnchorKey();
-        const contentBlock = currentContent.getBlockForKey(blockKey);
-
-        const lastChange = this.getLastChange();
-
-        if (lastChange && lastChange.selectionBefore === selectionBefore) {
-            // 合并选项
-            mergeChange(lastChange, {
-                selectionAfter,
-                selectionBefore,
-                contentBlock
-            });
-        } else {
-            const change = createChange({
-                selectionAfter,
-                selectionBefore,
-                contentBlock
-            });
-            this.changes.push(change);
-        }
+        this.trigger('change', pair[0], pair[1]);
     }
 
     getBlockIndexByBlockKey(blockKey) {
         const blocks = this.editorState.getCurrentContent().getBlocksAsArray();
-        return blocks.findIndex(item => item === blockKey);
+        return blocks.findIndex((item) => item === blockKey);
     }
 
     getSelection(editorState) {
@@ -92,44 +88,76 @@ export default class EditorAdapter {
         return selection;
     }
 
+    getSelectionRange(editorState) {
+        const selection = editorState.getSelection();
+
+        const startKey = selection.getStartKey();
+        const startOffset = selection.getStartOffset();
+
+        const endKey = selection.getEndKey();
+        const endOffset = selection.getEndOffset();
+
+        return [ {key: startKey, offset: startOffset}, { key: endKey, offset: endOffset } ];
+    }
+
     // 插入文本
     getInsertChar(editorState) {
-        const selection = this.getSelection(editorState);
-        const blockKey = selection.getAnchorKey();
-        const blockIndex = this.getBlockIndexByBlockKey(blockKey);
-        const contentBlock = currentContent.getBlockForKey(blockKey);
+        const contentState = editorState.getCurrentContent();
+        const blocks = contentState.getBlocksAsArray();
+        const selection = editorState.getSelection();
+        const blockKey = selection.getStartKey();
         const startOffset = selection.getStartOffset();
-        const text = contentBlock.getText()[startOffset - 1];
-        const change = {
-            blockIndex,
-            start: startOffset - 1,
-            end: startOffset,
-            text,
-            removed: '',
-            attributes: {},
-        };
-        return change;
-    }
 
-    // 插入 n 行
-    getInsertBlock(editorState) {
-        const selection = this.getSelection(editorState);
-        const blockIndex = this.getBlockIndexByBlockKey(blockKey);
-        const startOffset = selection.getStartOffset();
+        const contentBlock = contentState.getBlockForKey(blockKey);
+        const text = contentBlock.getText()[startOffset - 1];
+
+        let position = 0;
+        let i = 0;
+        let block = blocks[i];
+        while (true) {
+            if (block.getKey() !== blockKey) {
+                position += block.length;
+                continue;
+            }
+            else {
+                position += startOffset;
+                break;
+            }
+        }
 
         return {
-            blockIndex,
-            start: startOffset - 1,
-            end: startOffset,
-            split: true,
-            attributes: {},
+            start: position - 1,
+            end: position,
+            text,
+            removed: '',
+            attributes: {}
         };
     }
 
-    // 删除文本
+    getDelChar(editorState) {
+        // const startOffset = this.getSelectionStartOffset(editorState);
+        const [ start, end ] = Selection.getSelectionRange(editorState);
+        console.log(`start`, start);
+        console.log(`end`, end)
+        return {
+            start: end.offset,
+            end: start.offset,
+            text: '',
+            removed: 'a',
+            attributes: {}
+        };
+    }
 
-    // 删除 n 行
-    
+    getRemoveRanegChange(editorState) {
+        const [ start, end ] = Selection.getSelectionRange(editorState);
+        return {
+            start,
+            end,
+            text: '',
+            removed: new Array(end - start).fill('1').join(''),
+            attributes: {},
+        };
+    }
 
     getLastChange() {
         if (this.changes.length) {
@@ -138,16 +166,33 @@ export default class EditorAdapter {
         return null;
     }
 
-    static operationFromEditorChange(changes, currentContent) {
-        const blockOperation = new BlockOperation();
+    // Converts a CodeMirror change object into a TextOperation and its inverse
+    // and returns them as a two-element array.
+    // 将codemirror的change对象 转变成 TextOperation。
+    // 返回一个数组 [ 操作， 撤回操作 ]
+    static operationFromCodeMirrorChanges(changes, docEndLength) {
+        console.log('-----changes', changes);
+        // Approach: Replay the changes, beginning with the most recent one, and
+        // construct the operation and its inverse. We have to convert the position
+        // in the pre-change coordinate system to an index. We have a method to
+        // convert a position in the coordinate system after all changes to an index,
+        // namely CodeMirror's `indexFromPos` method. We can use the information of
+        // a single change object to convert a post-change coordinate system to a
+        // pre-change coordinate system. We can now proceed inductively to get a
+        // pre-change coordinate system for all changes in the linked list.
+        // A disadvantage of this approach is its complexity `O(n^2)` in the length
+        // of the linked list of changes.
+        console.log('------docEndLength', docEndLength);
+        var operation = new TextOperation().retain(docEndLength);
+        var inverse = new TextOperation().retain(docEndLength);
 
         for (var i = changes.length - 1; i >= 0; i--) {
             var change = changes[i];
-            var blockKey = change.blockKey;
-
-            var { operation, blockEndLength } = blockOperation.createTextOperation(blockKey, currentContent);
             var fromIndex = change.start;
-            var restLength = blockEndLength - fromIndex - change.text.length;
+            var restLength = docEndLength - fromIndex - change.text.length;
+
+            console.log(`restLength`, restLength);
+
             // 保持住fromIndex，做delete操作，插入操作，保持住剩余的length，合并之前的operation
             operation = new TextOperation()
                 .retain(fromIndex)
@@ -157,18 +202,45 @@ export default class EditorAdapter {
                 .retain(restLength)
                 .compose(operation);
 
-            // inverse = inverse.compose(
-            //     new TextOperation()
-            //         .retain(fromIndex, blockKey)
-            //         .delete(change.text.length, blockKey)
-            //         .insert(change.removed, change.removedAttributes, blockKey)
-            //         .retain(restLength, blockKey)
-            // );
+            inverse = inverse.compose(
+                new TextOperation()
+                    .retain(fromIndex)
+                    .delete(change.text.length)
+                    .insert(change.removed, change.removedAttributes)
+                    .retain(restLength)
+            );
 
-            blockEndLength += change.removed.length - change.text.length;
-            blockOperation.setTextOpertaion(blockKey, operation, blockEndLength);
+            docEndLength += change.removed.length - change.text.length;
+            console.log(`docEndLength`, docEndLength, change);
         }
-        return [blockOperation];
+        return [operation, inverse];
+    }
+    // Converts an attributes changed object to an operation and its inverse.
+    // attributes的 operation 转化
+    static operationFromAttributesChanges(changes, cm) {
+        var docEndLength = codemirrorLength(cm);
+        console.log('---maybe it is attributes change----', changes);
+
+        var operation = new TextOperation();
+        var inverse = new TextOperation();
+        var pos = 0;
+
+        for (var i = 0; i < changes.length; i++) {
+            var change = changes[i];
+            var toRetain = change.start - pos;
+            Utils.assert(toRetain >= 0); // changes should be in order and non-overlapping.
+            operation.retain(toRetain);
+            inverse.retain(toRetain);
+
+            var length = change.end - change.start;
+            operation.retain(length, change.attributes);
+            inverse.retain(length, change.attributesInverse);
+            pos = change.start + length;
+        }
+
+        operation.retain(docEndLength - pos);
+        inverse.retain(docEndLength - pos);
+        return [operation, inverse];
     }
 
     // retain(1) insert('hello word'); 模拟光标后移，插入'hello word'
@@ -177,14 +249,17 @@ export default class EditorAdapter {
         const start = 2;
         const blockOperation = new BlockOperation();
         const textOperation = new TextOperation()
-          .retain(start)
-          .insert(str)
-          .retain(blockEndLength - start);
-        blockOperation.setTextOpertaion(blockKey, textOperation, blockEndLength - start);
+            .retain(start)
+            .insert(str)
+            .retain(blockEndLength - start);
+        blockOperation.setTextOpertaion(
+            blockKey,
+            textOperation,
+            blockEndLength - start
+        );
 
         return blockOperation;
     }
-
 
     mockTransformOperation() {
         // const blockOperation = new BlockOperation();
@@ -198,34 +273,80 @@ export default class EditorAdapter {
         console.log(`finalOperation`, finalOperation);
     }
 
-    applyBlockOperation(blockOperation) {
-        console.log(`blockOperation`, blockOperation);
-        const blockKeys = Object.keys(blockOperation.blockMap);
-
-        blockKeys.forEach(key => {
-            const { operation } = blockOperation.blockMap[key];
-            this.applyOperation(key, operation);
-        });
+    getCompactEditorState() {
+        const blocks = this.editorState.getCurrentContent().getBlocksAsArray();
+        if (!blocks.length) {
+            this.editorState = RichUtils.insertSoftNewline(this.editorState);
+        }
+        return this.editorState;
     }
 
-    applyOperation(blockOperation) {
+    getBlockPropertyByCursor(start) {
+        this.getCompactEditorState();
+        const blocks = this.editorState.getCurrentContent().getBlocksAsArray() || [];
 
-        for (let key in blockOperation) {
-            const operation = blockOperation[key];
-            const ops = operation.ops;
+        let restLen = start;
+        let cursorBlock = null;
+        blocks.forEach(block => {
+            const len = block.getLength();
+            if (restLen - len <= 0) {
+                cursorBlock = block;
+                return;
+            }
+            else {
+                restLen = restLen - len;
+            }
+        });
 
-            var index = 0;
-            for (var i = 0, l = ops.length; i < l; i++) {
-                var op = ops[i];
-                // 保持光标
-                if (op.isRetain()) {
-                    // updateTextAttributes(op);
-                    index += op.chars;
-                } else if (op.isInsert()) {
-                    this.insertText(key, index, op);
-                } else if (op.isDelete()) {
-                    // removeText(op);
-                }
+        console.log(`cursorBlock`, cursorBlock)
+
+        return [cursorBlock, restLen];
+    }
+
+    // 这一串待定，因为这一串是 draft-js特有的
+    applyOperation(operation) {
+        // HACK: If there are a lot of operations; hide CodeMirror so that it doesn't re-render constantly.
+        // if (operation.ops.length > 10) {
+        //     this.rtcm.codeMirror
+        //         .getWrapperElement()
+        //         .setAttribute('style', 'display: none');
+        // }
+
+        var ops = operation.ops;
+        console.log(`ops`, ops)
+
+        var selection = SelectionState.createEmpty();
+        const [ block ] = this.getBlockPropertyByCursor(0);
+        const blockKey = block.getKey();
+        selection = selection.set('anchorKey', blockKey).set('focusKey', blockKey).set('anchorOffset', 0);
+        var index = 0; // holds the current index into CodeMirror's content
+        for (var i = 0, l = ops.length; i < l; i++) {
+            var op = ops[i];
+            if (op.isRetain()) {
+                const [ block, start ] = this.getBlockPropertyByCursor(index + op.chars);
+                selection
+                    .set('anchorOffset', start)
+                    .set('anchorKey', block.getKey());
+                index += op.chars;
+            } else if (op.isInsert()) {
+                const contentState = this.editorState.getCurrentContent();
+                const newContent = Modifier.insertText(
+                    contentState,
+                    selection,
+                    op.text
+                );
+
+                selection = SelectionState.createEmpty();
+                const newEditorState = EditorState.set(this.editorState, {
+                    currentContent: newContent
+                });
+
+                this.editorState = newEditorState;
+
+                this.ref.trigger('change', newEditorState);
+                index += op.text.length;
+            } else if (op.isDelete()) {
+                // this.rtcm.removeText(index, index + op.chars, 'RTCMADAPTER');
             }
         }
     }
@@ -233,21 +354,21 @@ export default class EditorAdapter {
     insertText(blockKey, start, op) {
         const currentContent = this.editorState.getCurrentContent();
         let tragetRange = SelectionState.createEmpty(blockKey);
-        tragetRange = tragetRange.set('anchorOffset', start)
+        tragetRange = tragetRange
+            .set('anchorOffset', start)
             .set('focusOffset', start);
 
-        console.log(`tragetRange.toJS()`, start, tragetRange.toJS())
+        console.log(`tragetRange.toJS()`, start, tragetRange.toJS());
 
         const newContent = Modifier.insertText(
             currentContent,
             tragetRange,
-            op.text,
+            op.text
         );
 
         const newEditorState = EditorState.set(this.editorState, {
-            currentContent: newContent,
+            currentContent: newContent
         });
-
 
         this.ref.trigger('change', newEditorState);
         // console.log(`newContent`, newEditorState.toJS());
@@ -330,4 +451,3 @@ function mergeChange(
 ) {
     source.text = getText({ selectionBefore, selectionAfter, contentBlock });
 }
-

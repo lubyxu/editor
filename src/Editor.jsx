@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import Editor, { composeDecorators } from 'draft-js-plugins-editor';
 import {
     EditorState,
+    ContentState,
     RichUtils,
     getDefaultKeyBinding,
     KeyBindingUtil,
@@ -70,10 +71,10 @@ const toolbarPlugin = createToolbarPlugin();
 const { Toolbar } = toolbarPlugin;
 
 /* Side Toolbar */
-// import createSidebarPlugin from 'last-draft-js-sidebar-plugin'
-// import 'last-draft-js-sidebar-plugin/lib/plugin.css'
-// const sidebarPlugin = createSidebarPlugin()
-// const { Sidebar } = sidebarPlugin
+import createSidebarPlugin from 'last-draft-js-sidebar-plugin'
+import 'last-draft-js-sidebar-plugin/lib/plugin.css'
+const sidebarPlugin = createSidebarPlugin()
+const { Sidebar } = sidebarPlugin
 
 /* Embed plugin */
 import createEmbedPlugin from 'draft-js-embed-plugin';
@@ -108,6 +109,7 @@ const plugins = [
     toolbarPlugin,
     embedPlugin,
     linkPlugin,
+    sidebarPlugin,
     createMarkdownShortcutsPlugin()
 ];
 
@@ -132,6 +134,12 @@ export default class WhaleEditor extends Component {
         this.shareEditor = new SharedEditor(this.socket, this.adapter, {
             forceUpdate: this.forceUpdate.bind(this)
         });
+
+        const defaultContent = ContentState.createFromText('hello world');
+        const newState = EditorState.set(props.editorState, {
+            currentContent: defaultContent
+        });
+        this.props.onChange(newState);
     }
 
     setEditorState = (editorState) => {
@@ -140,7 +148,13 @@ export default class WhaleEditor extends Component {
 
     onChange = (editorState) => {
         this.props.onChange(editorState);
+        const json = editorState.toJS();
+        // console.log('json :>> ', json);
+    
         this.adapter.onChange(editorState);
+
+        // const operation = this.shareEditor.client?.state;
+        // console.log('opertaion :>> ', operation);
     };
 
     onMock = () => {
@@ -253,7 +267,7 @@ export default class WhaleEditor extends Component {
                         />
                         {/* <AlignmentTool /> */}
                         <Toolbar />
-                        {/* <Sidebar /> */}
+                        <Sidebar />
                         {/* <EmojiSuggestions />
             <MentionSuggestions
                 onSearchChange={this.onSearchChange}

@@ -1,48 +1,65 @@
-class WrappedOperation {
-    constructor(blockOperation) {
-        this.block = {};
-        for (let i in blockOperation) {
-            // 给每个BlockOperation的 TextOpertaion 包一下
-            this.block[i] = {
-                wrapped: blockOperation[i],
-            };
-        }
+// Copy all properties from source to target.
+function copy (source, target) {
+  for (var key in source) {
+    if (source.hasOwnProperty(key)) {
+      target[key] = source[key]
     }
-    // transform a, b 对应的段落。
-    // blockOperationA blockOperationB 均为 WrappedOperation 类型
-    static transform(blockOperationA, blockOperationB) {
-        const blockB = blockOperationB.block;
-        const blockKeysB = Object.keys(blockB);
-
-        let blockMerge = {};
-        for (let i in blockOperationA) {
-            blockMerge[i] = blockOperationA[i].wrapped;
-        }
-
-        blockKeysB.forEach(key => {
-            if (blockMerge[key]) {
-                blockMerge[key] = blockMerge[key].wrapped.transform(blockB[key].wrapped);
-            }
-            else {
-                blockMerge[key] = blockB[key].wrapped;
-            }
-        });
-        
-        return [
-            new WrappedOperation(blockMerge)
-        ];
-    }
-
-    toJSON() {
-        const json = {};
-
-        for (let i in this.block) {
-            // 给每个BlockOperation的 TextOpertaion 包一下
-            json[i] = this.block[i].wrapped.toJSON();
-        }
-
-        return json;
-    }
+  }
 }
 
-export default WrappedOperation;
+function composeMeta (a, b) {
+  if (a && typeof a === 'object') {
+    if (typeof a.compose === 'function') { return a.compose(b) }
+    var meta = {}
+    copy(a, meta)
+    copy(b, meta)
+    return meta
+  }
+  return b
+}
+
+function transformMeta (meta, operation) {
+  if (meta && typeof meta === 'object' && typeof meta.transform === 'function') {
+    return meta.transform(operation)
+  }
+  return meta
+}
+
+// WrappedOperation 一个包含operation 和相关 元数据的类
+export default class WrappedOperation {
+  // A WrappedOperation contains an operation and corresponing metadata.
+  constructor (operation, metadata) {
+    this.wrapped = operation
+    this.meta = metadata
+  }
+  apply () {
+    return this.wrapped.apply.apply(this.wrapped, arguments)
+  }
+  invert () {
+    var meta = this.meta
+    if (meta && typeof meta === 'object' && typeof meta.invert === 'function') {
+      meta = this.meta.invert.apply(meta, arguments)
+    }
+    return new WrappedOperation(
+      this.wrapped.invert.apply(this.wrapped, arguments),
+      meta
+    )
+  }
+  compose (other) {
+    return new WrappedOperation(
+      this.wrapped.compose(other.wrapped),
+      composeMeta(this.meta, other.meta)
+    )
+  }
+  transform (other) {
+    return WrappedOperation.transform(this, other)
+  }
+
+  static transform (a, b) {
+    var pair = a.wrapped.transform(b.wrapped)
+    return [
+      new WrappedOperation(pair[0], transformMeta(a.meta, b.wrapped)),
+      new WrappedOperation(pair[1], transformMeta(b.meta, a.wrapped))
+    ]
+  }
+}
